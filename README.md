@@ -1,4 +1,4 @@
-# Gashi File Server
+# FG File Server
 
 A lightweight self-hosted file server with upload, download, and public sharing support. Built with Python/Flask, served by Gunicorn, and packaged as a Docker container.
 
