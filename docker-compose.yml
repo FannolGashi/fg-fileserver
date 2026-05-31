@@ -1,0 +1,14 @@
+services:
+  fileserver:
+    build: .
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./uploads:/uploads
+    environment:
+      # Change these before deploying!
+      AUTH_USERNAME: admin
+      AUTH_PASSWORD: fileserver123
+      SECRET_KEY: change-me-to-a-random-string
+      MAX_UPLOAD_MB: "500"
+    restart: unless-stopped

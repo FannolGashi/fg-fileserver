@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Gashi File Server</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0f172a;
+      font-family: system-ui, sans-serif;
+      color: #e2e8f0;
+    }
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+    .logout {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      text-decoration: none;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .logout:hover { color: #e2e8f0; border-color: #64748b; }
+    main { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+
+    /* Flash messages */
+    .flash { border-radius: 6px; padding: 0.65rem 1rem; font-size: 0.875rem; margin-bottom: 1.25rem; }
+    .flash.success { background: #052e16; border: 1px solid #166534; color: #86efac; }
+    .flash.error   { background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5; }
+
+    /* Upload zone */
+    .upload-card {
+      background: #1e293b;
+      border: 2px dashed #334155;
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      margin-bottom: 2rem;
+      transition: border-color 0.2s;
+    }
+    .upload-card.drag-over { border-color: #6366f1; background: #1e1b4b; }
+    .upload-card p { color: #94a3b8; margin-bottom: 1rem; font-size: 0.95rem; }
+    .upload-card input[type="file"] { display: none; }
+    .btn-upload {
+      display: inline-block;
+      padding: 0.55rem 1.25rem;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-upload:hover { background: #4f46e5; }
+    #file-names { margin-top: 0.75rem; font-size: 0.8rem; color: #64748b; min-height: 1.2em; }
+    .btn-submit {
+      margin-top: 1rem;
+      padding: 0.55rem 1.5rem;
+      background: #059669;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: none;
+    }
+    .btn-submit:hover { background: #047857; }
+
+    /* File table */
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 1px solid #334155; }
+    th {
+      text-align: left;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      padding: 0.5rem 0.75rem;
+    }
+    tbody tr { border-bottom: 1px solid #1e293b; transition: background 0.15s; }
+    tbody tr:hover { background: #1e293b; }
+    td { padding: 0.65rem 0.75rem; font-size: 0.9rem; vertical-align: middle; }
+    .td-size { color: #64748b; font-size: 0.8rem; white-space: nowrap; }
+    .td-actions { text-align: right; white-space: nowrap; }
+    @media (max-width: 600px) {
+      header { padding: 0.75rem 1rem; }
+      .brand { font-size: 0.95rem; }
+      thead { display: none; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      tbody tr {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+        padding: 0.75rem;
+      }
+      tbody tr:hover { background: #1e293b; }
+      td { padding: 0.2rem 0; border: none; }
+      .td-size { margin-bottom: 0.6rem; }
+      .td-actions {
+        text-align: left;
+        white-space: normal;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+      }
+      .btn-toggle { margin-left: 0; }
+      .btn-del { margin-left: 0; }
+    }
+    .btn-dl {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0.35rem 0.75rem;
+      background: #0f172a;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      text-decoration: none;
+      transition: border-color 0.2s;
+    }
+    .btn-dl:hover { border-color: #6366f1; color: #a5b4fc; }
+    .btn-del {
+      padding: 0.35rem 0.75rem;
+      background: transparent;
+      color: #64748b;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      margin-left: 0.4rem;
+    }
+    .btn-del:hover { color: #f87171; border-color: #7f1d1d; }
+    .btn-toggle {
+      padding: 0.35rem 0.75rem;
+      background: transparent;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-left: 0.4rem;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .btn-toggle.is-public {
+      color: #86efac;
+      border-color: #166534;
+      background: #052e16;
+    }
+    .btn-toggle.is-public:hover { background: #14532d; }
+    .btn-toggle.is-private {
+      color: #94a3b8;
+      border-color: #334155;
+    }
+    .btn-toggle.is-private:hover { color: #e2e8f0; border-color: #64748b; }
+    .badge-public {
+      display: inline-block;
+      padding: 0.15rem 0.45rem;
+      background: #052e16;
+      border: 1px solid #166534;
+      color: #86efac;
+      border-radius: 99px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+    .empty { color: #475569; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">📁 Gashi File Server</div>
+    <div style="display:flex;gap:0.6rem;align-items:center">
+      <a href="/" class="logout">Public page</a>
+      <a href="/logout" class="logout">Sign out</a>
+    </div>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+        <div class="flash {{ category }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Upload -->
+    <form method="post" action="/upload" enctype="multipart/form-data" id="upload-form">
+      <div class="upload-card" id="drop-zone">
+        <p>Drag &amp; drop files here, or click to browse</p>
+        <label class="btn-upload" for="file-input">Choose files</label>
+        <input type="file" id="file-input" name="files" multiple/>
+        <div id="file-names"></div>
+        <button class="btn-submit" type="submit" id="submit-btn">Upload</button>
+      </div>
+    </form>
+
+    <!-- File list -->
+    <div class="section-title">Uploaded files ({{ files|length }})</div>
+    {% if files %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Size</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in files %}
+        <tr>
+          <td>
+            {{ f.name }}
+            {% if f.public %}<span class="badge-public">public</span>{% endif %}
+          </td>
+          <td class="td-size">{{ f.size }}</td>
+          <td class="td-actions">
+            <a class="btn-dl" href="/download/{{ f.name }}">&#11015; Download</a>
+            <form method="post" action="/toggle/{{ f.name }}" style="display:inline">
+              <button type="submit"
+                class="btn-toggle {% if f.public %}is-public{% else %}is-private{% endif %}"
+                title="{% if f.public %}Click to make private{% else %}Click to make public{% endif %}">
+                {% if f.public %}&#127758; Public{% else %}&#128274; Private{% endif %}
+              </button>
+            </form>
+            <form method="post" action="/delete/{{ f.name }}" style="display:inline"
+                  onsubmit="return confirm('Delete {{ f.name }}?')">
+              <button class="btn-del" type="submit">&#128465;</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">No files yet — upload something above.</div>
+    {% endif %}
+  </main>
+
+  <script>
+    const input = document.getElementById('file-input');
+    const names = document.getElementById('file-names');
+    const submitBtn = document.getElementById('submit-btn');
+    const dropZone = document.getElementById('drop-zone');
+
+    function updateNames(files) {
+      if (files.length === 0) { names.textContent = ''; submitBtn.style.display = 'none'; return; }
+      names.textContent = Array.from(files).map(f => f.name).join(', ');
+      submitBtn.style.display = 'inline-block';
+    }
+
+    input.addEventListener('change', () => updateNames(input.files));
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const dt = new DataTransfer();
+      Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+      input.files = dt.files;
+      updateNames(input.files);
+    });
+  </script>
+</body>
+</html>
